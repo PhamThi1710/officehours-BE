@@ -15,6 +15,7 @@ const AvailabilityRule = db.AvailabilityRule;
 const AvailabilityException = db.AvailabilityException;
 const Booking = db.Booking;
 const Payout = db.Payout;
+const Review = db.Review;
 const User = db.User;
 
 const PROFESSOR_INCLUDE = {
@@ -24,6 +25,7 @@ const PROFESSOR_INCLUDE = {
   include: [{ model: User, as: "user", attributes: ["id", "full_name", "avatar_url"] }],
 };
 const STUDENT_INCLUDE = { model: User, as: "student", attributes: ["id", "full_name", "avatar_url"] };
+const REVIEW_INCLUDE = { model: Review, as: "review", attributes: ["id", "rating", "comment"] };
 
 function toBookingResponse(booking) {
   return {
@@ -49,6 +51,7 @@ function toBookingResponse(booking) {
     student: booking.student
       ? { id: booking.student.id, full_name: booking.student.full_name, avatar_url: booking.student.avatar_url }
       : undefined,
+    review: booking.review ? { id: booking.review.id, rating: booking.review.rating, comment: booking.review.comment } : null,
   };
 }
 
@@ -208,7 +211,7 @@ exports.listForProfessor = async (req, res) => {
 };
 
 async function findBookingForAuthUser(req, res) {
-  const booking = await Booking.findByPk(req.params.id, { include: [PROFESSOR_INCLUDE, STUDENT_INCLUDE] });
+  const booking = await Booking.findByPk(req.params.id, { include: [PROFESSOR_INCLUDE, STUDENT_INCLUDE, REVIEW_INCLUDE] });
   if (!booking) {
     res.status(404).json({ message: "Booking not found" });
     return null;
