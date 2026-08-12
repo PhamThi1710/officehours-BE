@@ -47,6 +47,7 @@ require("./routes/admin/professor-admin.routes")(app);
 require("./routes/admin/report-admin.routes")(app);
 require("./routes/admin/faq-admin.routes")(app);
 require("./routes/admin/support-ticket-admin.routes")(app);
+require("./routes/admin/booking-admin.routes")(app);
 require("./routes/chatMessage.routes")(app);
 
 app.use((req, res) => {

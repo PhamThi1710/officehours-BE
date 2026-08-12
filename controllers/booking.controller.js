@@ -320,3 +320,8 @@ exports.complete = async (req, res) => {
     return res.status(500).json({ message: err.message });
   }
 };
+
+// Exposed for the admin bookings list (controllers/admin/booking-admin.controller.js)
+// so the response shape can't drift from the regular booking endpoints.
+exports.toBookingResponse = toBookingResponse;
+exports.BOOKING_INCLUDES = [PROFESSOR_INCLUDE, STUDENT_INCLUDE, REVIEW_INCLUDE];
