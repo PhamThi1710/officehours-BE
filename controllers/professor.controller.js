@@ -27,6 +27,8 @@ function toPublicProfile(profile) {
   };
 }
 
+exports.toPublicProfile = toPublicProfile;
+
 function toOwnerProfile(profile) {
   return {
     ...toPublicProfile(profile),

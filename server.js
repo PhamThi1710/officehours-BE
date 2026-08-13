@@ -49,6 +49,7 @@ require("./routes/admin/faq-admin.routes")(app);
 require("./routes/admin/support-ticket-admin.routes")(app);
 require("./routes/admin/booking-admin.routes")(app);
 require("./routes/chatMessage.routes")(app);
+require("./routes/ai.routes")(app);
 
 app.use((req, res) => {
   res.status(404).json({ message: "Route not found" });
