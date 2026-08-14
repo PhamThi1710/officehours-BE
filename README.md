@@ -28,6 +28,24 @@ npm run dev
 
 Health check: `GET /health`.
 
+## Test credentials
+
+Skip registering — these three accounts already have realistic data seeded (bookings in every
+status, reviews, payouts, an approved offline class, etc.), so any one of them exercises the
+**entire** feature set for its role end-to-end.
+
+| Role | Email | Password |
+|---|---|---|
+| Student | `jenny.student@stanford.edu` | `Test1234!` |
+| Professor | `prof.chen@stanford.edu` | `Test1234!` |
+| Admin | `admin@officehours.dev` | `ChangeMe123!` |
+
+Log in via `POST /api/auth/login` (or through `officehours-FE` / `officehours-admin`, which call
+the same endpoint). `prof.chen` is pre-approved and already has availability rules, an offline
+class, mixed pending/confirmed/completed/cancelled bookings, reviews, and both a pending and a
+`paid_simulated` payout. `jenny.student` has a completed+paid booking ready to review/invoice, plus
+pending offline-class bookings ready to pay/cancel.
+
 ## Project structure
 
 ```
@@ -43,82 +61,6 @@ utils/        # eduEmail validation, token generation, etc.
 tests/        # jest unit tests (models mocked, no real DB)
 ```
 
-## Build phases
-
-- [x] Phase 0 — repo scaffold
-- [x] Phase 1 — users schema, JWT auth (register/login/refresh/logout), Google OAuth, `.edu`
-      email validation, role middleware
-- [x] Phase 2 — professor profiles + admin approval
-- [x] Phase 3 — availability rules + slot generation
-- [x] Phase 4 — booking flow (double-booking prevention)
-- [x] Phase 5 — Stripe Checkout (test mode) + invoice PDF
-- [x] Phase 6 — payout ledger + admin revenue report
-- [x] Phase 7 — reviews & ratings
-- [x] Phase 8 — email notifications
-- [x] Phase 9 — WebRTC video signalling
-- [x] Phase 10 — FAQ + support tickets
-- [x] Phase 11 — realtime chat (optional)
-
-All 12 phases (0–11) are done. `officehours-BE` now has every backend feature from the original
-scope; remaining work is the `officehours-FE` and `officehours-admin` UIs, then deployment.
-
-## API (so far)
-
-| Method | Path | Auth | Description |
-|---|---|---|---|
-| POST | /api/auth/register | — | Register with `.edu` email + password (student/professor) |
-| POST | /api/auth/login | — | Email/password login |
-| POST | /api/auth/google | — | Google ID token login/signup |
-| POST | /api/auth/refresh | — | Rotate refresh token, issue new access token |
-| POST | /api/auth/logout | — | Revoke a refresh token |
-| GET | /api/auth/me | Bearer | Current user |
-| POST | /api/professors/apply | Bearer (professor) | Create own professor profile (status = pending) |
-| GET | /api/professors/me | Bearer (professor) | Own professor profile, any status |
-| PATCH | /api/professors/me | Bearer (professor) | Update own profile fields |
-| GET | /api/professors | — | List approved professors (`?subject=&search=&page=&limit=`) |
-| GET | /api/professors/:id | — | Approved professor detail |
-| GET | /api/admin/professors | Bearer (admin) | List professors (`?status=pending\|approved\|rejected`) |
-| GET | /api/admin/professors/:id | Bearer (admin) | Professor detail incl. contact email |
-| PATCH | /api/admin/professors/:id/approve | Bearer (admin) | Approve a professor profile |
-| PATCH | /api/admin/professors/:id/reject | Bearer (admin) | Reject with optional `reason` |
-| POST | /api/professors/me/availability-rules | Bearer (professor) | Add a recurring (`day_of_week`) or one-off (`specific_date`) weekly rule |
-| GET | /api/professors/me/availability-rules | Bearer (professor) | List own rules |
-| DELETE | /api/professors/me/availability-rules/:ruleId | Bearer (professor) | Remove own rule |
-| POST | /api/professors/me/exceptions | Bearer (professor) | Block out a whole date (e.g. sick day) |
-| GET | /api/professors/me/exceptions | Bearer (professor) | List own blackout dates |
-| DELETE | /api/professors/me/exceptions/:exceptionId | Bearer (professor) | Remove own blackout date |
-| GET | /api/professors/:id/slots?date=YYYY-MM-DD | — | Bookable UTC slots for that professor on that date |
-| POST | /api/bookings | Bearer (student) | Book a slot (`professor_id`, `start_at`) |
-| GET | /api/bookings/me | Bearer (student) | Own bookings (`?status=&page=&limit=`) |
-| GET | /api/professors/me/bookings | Bearer (professor) | Own bookings as a professor |
-| GET | /api/bookings/:id | Bearer (owner student/professor/admin) | Booking detail |
-| PATCH | /api/bookings/:id/cancel | Bearer (owner student/professor/admin) | Cancel before it starts (`reason` optional) |
-| PATCH | /api/bookings/:id/complete | Bearer (owner professor/admin) | Mark a past confirmed session completed |
-| POST | /api/bookings/:id/checkout-session | Bearer (owner student) | Create a Stripe test-mode Checkout Session for a priced, unpaid booking |
-| POST | /api/webhooks/stripe | Stripe signature (no JWT) | `checkout.session.completed` → marks the booking `confirmed`/`paid` |
-| GET | /api/bookings/:id/invoice | Bearer (owner student/professor/admin) | Streams a PDF invoice, once paid or free |
-| GET | /api/professors/me/payouts | Bearer (professor) | Own payout ledger (`?status=&page=&limit=`) + pending/paid summary |
-| GET | /api/admin/payouts | Bearer (admin) | All payouts (`?status=&professor_id=`) |
-| PATCH | /api/admin/payouts/:id/mark-paid | Bearer (admin) | Simulate disbursing a pending payout |
-| GET | /api/admin/reports/bookings?days=30 | Bearer (admin) | Booking counts by status + daily time series |
-| GET | /api/admin/reports/revenue?days=30 | Bearer (admin) | Total/daily paid revenue + payout pending/paid totals |
-| POST | /api/bookings/:id/review | Bearer (owner student) | Review a completed session (`rating` 1–5, `comment` optional) |
-| GET | /api/professors/:id/reviews | — | Paginated reviews for an approved professor |
-| PATCH | /api/reviews/:id | Bearer (owner student) | Edit own review |
-| DELETE | /api/reviews/:id | Bearer (owner student or admin) | Delete a review |
-| GET | /api/bookings/:id/video-room | Bearer (owner student/professor) | Short-lived room token + ICE servers for the WebRTC signalling socket |
-| GET | /api/faqs?category= | — | Published FAQs, ordered by `sort_order` |
-| POST | /api/support-tickets | — (optional Bearer) | Submit a ticket; guests must supply `email`, logged-in callers may omit it |
-| GET | /api/support-tickets/me | Bearer | Own submitted tickets |
-| GET | /api/admin/faqs | Bearer (admin) | All FAQs incl. unpublished (`?category=&is_published=`) |
-| POST | /api/admin/faqs | Bearer (admin) | Create an FAQ |
-| PATCH | /api/admin/faqs/:id | Bearer (admin) | Update an FAQ |
-| DELETE | /api/admin/faqs/:id | Bearer (admin) | Delete an FAQ |
-| GET | /api/admin/support-tickets | Bearer (admin) | All tickets (`?status=`) |
-| GET | /api/admin/support-tickets/:id | Bearer (admin) | Ticket detail |
-| PATCH | /api/admin/support-tickets/:id | Bearer (admin) | Set `admin_reply` and/or `status`; a reply emails the submitter |
-| GET | /api/bookings/:id/messages | Bearer (party student/professor) | Chat history for a booking (oldest first); live delivery is over Socket.io, not REST |
-
 ### Availability & slot generation design
 
 - Rules are wall-clock times (`HH:mm`) in the professor's own IANA `timezone` — `utils/slotGenerator.js`
@@ -129,7 +71,7 @@ scope; remaining work is the `officehours-FE` and `officehours-admin` UIs, then 
 - `generateAvailableSlots` is a pure function (`utils/slotGenerator.js`, covered by
   `tests/slotGenerator.test.js`) so the timezone/overlap/past-slot math is unit-tested without a DB.
   It takes a `bookedStartTimesUtc` list to exclude taken slots — `availability.controller.js#getSlots`
-  and `booking.controller.js#create` both feed it from the real `bookings` table (Phase 4).
+  and `booking.controller.js#create` both feed it from the real `bookings` table.
 
 ### Booking flow & double-booking prevention
 
@@ -146,11 +88,37 @@ scope; remaining work is the `officehours-FE` and `officehours-admin` UIs, then 
 - Pricing is snapshotted onto the booking from `professor_profiles.price_per_session` at booking
   time, so a later price change never rewrites an existing booking's cost.
 - `price_per_session = 0` auto-confirms the booking (`status=confirmed`, `payment_status=free`).
-  A priced session is created `pending`/`unpaid` — Phase 5 (Stripe) is what moves it to
-  `confirmed`/`paid` via webhook, so there's intentionally no manual `PATCH /:id/confirm` endpoint.
+  A priced session is created `pending`/`unpaid` — the Stripe webhook (below) is what moves it to
+  `confirmed`/`paid`, so there's intentionally no manual `PATCH /:id/confirm` endpoint.
 - `cancel` is blocked once `start_at` has passed (for non-admins) and on already-cancelled/completed
   bookings; `complete` requires `status=confirmed` and `start_at` in the past, and is restricted to
   the owning professor or an admin.
+
+### Offline (in-person) classes & nearby search
+
+- A second, location-based booking type alongside 1:1 video sessions: professors optionally create
+  an `OfflineClass` (title, address, capacity, price, recurring `day_of_week`/one-off
+  `specific_date` schedule — same shape convention as `AvailabilityRule`). Students discover them on
+  a map without searching for a professor by name.
+- Addresses are geocoded server-side via OpenStreetMap **Nominatim** (`utils/geocoding.js`) — no
+  API key, but its usage policy requires ≤1 req/sec and a descriptive `User-Agent`, both enforced by
+  a module-level throttle/cache. Editing a class only re-geocodes if the `address` string actually
+  changed, so routine edits (price, capacity, schedule) never hit Nominatim again.
+- `bookings.offline_class_id` + `session_type` extend the existing `Booking` model rather than a
+  parallel table, so offline bookings get the whole existing pipeline (payments, reviews, chat,
+  reminders, cancellation) for free. The one shared-logic change: the partial unique index that
+  guarantees exactly one active booking per `(professor_id, start_at)` now only applies to video
+  bookings (`WHERE offline_class_id IS NULL`) — an offline class has a `capacity` and deliberately
+  allows multiple students to hold the same instance. Capacity is enforced separately in
+  `offlineClasses.controller.js#book` under a row lock (`OfflineClass` row `SELECT ... FOR UPDATE`
+  inside a transaction), the offline-class analog of the video path's unique-index race guard.
+- `utils/offlineClassInstances.js` turns a class's recurring/one-off rule into concrete upcoming UTC
+  session instances (pure function, sibling to `utils/slotGenerator.js`, no DB) — used both to show
+  "next: Tue 6pm" on the nearby listing and to reject a `/book` request whose `start_at` doesn't
+  match a real instance.
+- `GET /api/offline-classes/nearby` computes distance with the **Haversine formula directly in SQL**
+  (`sequelize.query` with bound params, no string interpolation) rather than PostGIS — deliberately
+  simple, since the dataset this project targets is small.
 
 ### Payments & invoices (Stripe test mode)
 
@@ -194,9 +162,9 @@ scope; remaining work is the `officehours-FE` and `officehours-admin` UIs, then 
 - `professor_profiles.rating_avg`/`total_reviews` are **recomputed from scratch** (`AVG`/`COUNT`
   over `reviews`) inside the same transaction as every create/update/delete, rather than
   incrementally adjusted — so they can never drift out of sync no matter how a review changes.
-- Also fixed in this phase: `professor_profiles.total_sessions` had existed since Phase 2 but
-  nothing ever incremented it — `booking.controller.js#complete` now does, for every completed
-  session (paid or free), since it's the natural place session completion is already recorded.
+- Also fixes a latent bug: `professor_profiles.total_sessions` existed but nothing ever incremented
+  it — `booking.controller.js#complete` now does, for every completed session (paid or free), since
+  it's the natural place session completion is already recorded.
 
 ### Email notifications
 
@@ -266,20 +234,19 @@ scope; remaining work is the `officehours-FE` and `officehours-admin` UIs, then 
   an explicit `status` — the common case (reply first, close later) needs no second API call, but an
   admin can still reply-and-close in one request.
 - A reply fires an email to the ticket's `email` (same fire-and-forget pattern as every other
-  notification in this codebase — see Phase 8) built from a template that, unlike the
-  booking-related ones, doesn't reuse `renderBookingEmailHtml` since a ticket has no
-  price/start_at to render.
+  notification in this codebase) built from a template that, unlike the booking-related ones,
+  doesn't reuse `renderBookingEmailHtml` since a ticket has no price/start_at to render.
 
 ### Realtime chat (Socket.io)
 
-- **Two different real-time transports, one HTTP server.** Phase 9's video signalling is raw `ws`
-  with a custom protocol; chat uses **Socket.io** instead (as originally planned) since it fits a
-  simple broadcast/room chat better — automatic reconnection, room management (`socket.join`/
-  `io.to(room).emit`), and acknowledgement callbacks for free, none of which the video path needs
-  (it's a dumb 2-party relay). Both attach to the **same** `http.Server` in `server.js`
-  (`ws/videoSignalling.js` + `ws/chatServer.js`) — one Render service, no extra port.
-- **This required fixing a real bug from Phase 9**: Node fires *every* registered `"upgrade"`
-  listener on an `http.Server` for *every* upgrade request, and `ws/videoSignalling.js` used to
+- **Two different real-time transports, one HTTP server.** The video call above is raw `ws` with a
+  custom protocol; chat uses **Socket.io** instead since it fits a simple broadcast/room chat better
+  — automatic reconnection, room management (`socket.join`/`io.to(room).emit`), and acknowledgement
+  callbacks for free, none of which the video path needs (it's a dumb 2-party relay). Both attach to
+  the **same** `http.Server` in `server.js` (`ws/videoSignalling.js` + `ws/chatServer.js`) — one
+  Render service, no extra port.
+- **This required fixing a real bug in the video signalling above**: Node fires *every* registered
+  `"upgrade"` listener on an `http.Server` for *every* upgrade request, and `ws/videoSignalling.js` used to
   unconditionally `socket.destroy()` any request that wasn't its own `/ws/video` path — which would
   have silently killed every Socket.io handshake (mounted at `/socket.io/`) before Socket.io's own
   listener ever saw it. Fixed to just `return` (do nothing) on a path it doesn't own, letting other

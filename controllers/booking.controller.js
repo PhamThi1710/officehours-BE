@@ -14,6 +14,7 @@ const ProfessorProfile = db.ProfessorProfile;
 const AvailabilityRule = db.AvailabilityRule;
 const AvailabilityException = db.AvailabilityException;
 const Booking = db.Booking;
+const OfflineClass = db.OfflineClass;
 const Payout = db.Payout;
 const Review = db.Review;
 const User = db.User;
@@ -26,6 +27,11 @@ const PROFESSOR_INCLUDE = {
 };
 const STUDENT_INCLUDE = { model: User, as: "student", attributes: ["id", "full_name", "avatar_url"] };
 const REVIEW_INCLUDE = { model: Review, as: "review", attributes: ["id", "rating", "comment"] };
+const OFFLINE_CLASS_INCLUDE = {
+  model: OfflineClass,
+  as: "offlineClass",
+  attributes: ["id", "title", "address"],
+};
 
 function toBookingResponse(booking) {
   return {
@@ -37,8 +43,12 @@ function toBookingResponse(booking) {
     status: booking.status,
     price: booking.price,
     payment_status: booking.payment_status,
+    session_type: booking.session_type,
     video_room_slug: booking.video_room_slug,
     cancel_reason: booking.cancel_reason,
+    offline_class: booking.offlineClass
+      ? { id: booking.offlineClass.id, title: booking.offlineClass.title, address: booking.offlineClass.address }
+      : null,
     professor: booking.professor
       ? {
           id: booking.professor.id,
@@ -165,7 +175,7 @@ exports.listMine = async (req, res) => {
 
     const result = await Booking.findAndCountAll({
       where,
-      include: [PROFESSOR_INCLUDE],
+      include: [PROFESSOR_INCLUDE, OFFLINE_CLASS_INCLUDE],
       order: [["start_at", "DESC"]],
       limit,
       offset,
@@ -198,7 +208,7 @@ exports.listForProfessor = async (req, res) => {
 
     const result = await Booking.findAndCountAll({
       where,
-      include: [STUDENT_INCLUDE],
+      include: [STUDENT_INCLUDE, OFFLINE_CLASS_INCLUDE],
       order: [["start_at", "DESC"]],
       limit,
       offset,
@@ -211,7 +221,9 @@ exports.listForProfessor = async (req, res) => {
 };
 
 async function findBookingForAuthUser(req, res) {
-  const booking = await Booking.findByPk(req.params.id, { include: [PROFESSOR_INCLUDE, STUDENT_INCLUDE, REVIEW_INCLUDE] });
+  const booking = await Booking.findByPk(req.params.id, {
+    include: [PROFESSOR_INCLUDE, STUDENT_INCLUDE, REVIEW_INCLUDE, OFFLINE_CLASS_INCLUDE],
+  });
   if (!booking) {
     res.status(404).json({ message: "Booking not found" });
     return null;
@@ -324,4 +336,4 @@ exports.complete = async (req, res) => {
 // Exposed for the admin bookings list (controllers/admin/booking-admin.controller.js)
 // so the response shape can't drift from the regular booking endpoints.
 exports.toBookingResponse = toBookingResponse;
-exports.BOOKING_INCLUDES = [PROFESSOR_INCLUDE, STUDENT_INCLUDE, REVIEW_INCLUDE];
+exports.BOOKING_INCLUDES = [PROFESSOR_INCLUDE, STUDENT_INCLUDE, REVIEW_INCLUDE, OFFLINE_CLASS_INCLUDE];

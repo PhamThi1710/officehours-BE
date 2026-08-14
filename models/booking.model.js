@@ -1,4 +1,5 @@
 const { BOOKING_STATUS, PAYMENT_STATUS } = require("../constants/bookingStatus");
+const { SESSION_TYPE } = require("../constants/sessionType");
 
 module.exports = (sequelize, Sequelize) => {
   const Booking = sequelize.define(
@@ -41,9 +42,20 @@ module.exports = (sequelize, Sequelize) => {
         allowNull: false,
         defaultValue: PAYMENT_STATUS.UNPAID,
       },
+      // Null for offline (in-person) bookings — there is no call to join.
       video_room_slug: {
         type: Sequelize.STRING,
+        allowNull: true,
+      },
+      session_type: {
+        type: Sequelize.ENUM(...Object.values(SESSION_TYPE)),
         allowNull: false,
+        defaultValue: SESSION_TYPE.VIDEO,
+      },
+      // Set only for session_type = "offline" — see offline_class.model.js.
+      offline_class_id: {
+        type: Sequelize.UUID,
+        allowNull: true,
       },
       cancelled_by: {
         type: Sequelize.UUID,

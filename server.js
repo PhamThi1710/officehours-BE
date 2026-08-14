@@ -36,6 +36,7 @@ app.get("/health", (req, res) => res.json({ status: "ok" }));
 require("./routes/auth.routes")(app);
 require("./routes/professor.routes")(app);
 require("./routes/availability.routes")(app);
+require("./routes/offlineClasses.routes")(app);
 require("./routes/booking.routes")(app);
 require("./routes/payment.routes")(app);
 require("./routes/payout.routes")(app);

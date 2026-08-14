@@ -32,6 +32,7 @@ db.RefreshToken = require("./refresh_token.model")(sequelize, Sequelize);
 db.ProfessorProfile = require("./professor_profile.model")(sequelize, Sequelize);
 db.AvailabilityRule = require("./availability_rule.model")(sequelize, Sequelize);
 db.AvailabilityException = require("./availability_exception.model")(sequelize, Sequelize);
+db.OfflineClass = require("./offline_class.model")(sequelize, Sequelize);
 db.Booking = require("./booking.model")(sequelize, Sequelize);
 db.Payment = require("./payment.model")(sequelize, Sequelize);
 db.Payout = require("./payout.model")(sequelize, Sequelize);
@@ -52,11 +53,17 @@ db.AvailabilityRule.belongsTo(db.ProfessorProfile, { foreignKey: "professor_id",
 db.ProfessorProfile.hasMany(db.AvailabilityException, { foreignKey: "professor_id", as: "availabilityExceptions" });
 db.AvailabilityException.belongsTo(db.ProfessorProfile, { foreignKey: "professor_id", as: "professor" });
 
+db.ProfessorProfile.hasMany(db.OfflineClass, { foreignKey: "professor_id", as: "offlineClasses" });
+db.OfflineClass.belongsTo(db.ProfessorProfile, { foreignKey: "professor_id", as: "professor" });
+
 db.User.hasMany(db.Booking, { foreignKey: "student_id", as: "bookingsAsStudent" });
 db.Booking.belongsTo(db.User, { foreignKey: "student_id", as: "student" });
 
 db.ProfessorProfile.hasMany(db.Booking, { foreignKey: "professor_id", as: "bookings" });
 db.Booking.belongsTo(db.ProfessorProfile, { foreignKey: "professor_id", as: "professor" });
+
+db.OfflineClass.hasMany(db.Booking, { foreignKey: "offline_class_id", as: "bookings" });
+db.Booking.belongsTo(db.OfflineClass, { foreignKey: "offline_class_id", as: "offlineClass" });
 
 db.Booking.hasOne(db.Payment, { foreignKey: "booking_id", as: "payment" });
 db.Payment.belongsTo(db.Booking, { foreignKey: "booking_id", as: "booking" });
